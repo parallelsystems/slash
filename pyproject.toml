@@ -30,7 +30,7 @@ dependencies = [
     "libtmux",
     "raven",
     "py>=1.5.0",
-    "pyparsing",
+    "pyparsing>=3",
     "vintage>=0.4.0",
     "brotli",
     "IPython==1.2.1; implementation_name=='pypy'",

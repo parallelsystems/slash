@@ -40,15 +40,24 @@ class ExtensionImporter(object):
         return None
 
     def create_module(self, spec):
-        return self._load_module(spec.name)
+        """Use the default module creation semantics.
+
+        The module we redirect to is installed into ``sys.modules`` by
+        :meth:`exec_module` rather than being returned from here, since
+        ``module_from_spec()`` unconditionally overwrites ``__spec__`` on the
+        module it receives. Returning the real module would therefore leave it
+        pointing at this importer, making :func:`importlib.reload` on it a
+        no-op.
+        """
+        return None
 
     def exec_module(self, module):
-        """The module returned by :meth:`create_module` is an already-executed module, so
-        there is nothing left to do here."""
+        """Replace the newly created module with the already-executed module we
+        redirect to."""
+        fullname = module.__name__
+        sys.modules[fullname] = self._load_module(fullname)
 
     def _load_module(self, fullname):
-        if fullname in sys.modules:
-            return sys.modules[fullname]
         modname = fullname.split('.', self.prefix_cutoff)[self.prefix_cutoff]
         for path in self.module_choices:
             realname = path % modname
