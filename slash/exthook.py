@@ -39,7 +39,7 @@ class ExtensionImporter(object):
             return importlib.util.spec_from_loader(fullname, self)
         return None
 
-    def create_module(self, spec):
+    def create_module(self, spec): # pylint: disable=W0613
         """Use the default module creation semantics.
 
         The module we redirect to is installed into ``sys.modules`` by
