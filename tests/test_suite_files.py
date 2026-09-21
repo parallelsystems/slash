@@ -87,9 +87,9 @@ def test_iter_suite_file_paths_nested_filter(tmpdir):
 
     [(item, matcher)] = suite_files.iter_suite_file_paths([str(suite_file1)])
     assert item == test_filename
-    assert matcher.matches('green')
-    assert not matcher.matches('blue')
-    assert not matcher.matches('green blue')
+    assert matcher.matches('green')  # pylint: disable=no-member
+    assert not matcher.matches('blue')  # pylint: disable=no-member
+    assert not matcher.matches('green blue')  # pylint: disable=no-member
 
 
 def test_parse_repeat_string():
