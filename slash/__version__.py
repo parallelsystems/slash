@@ -1,11 +1,11 @@
-import pkg_resources
+from importlib.metadata import PackageNotFoundError, version
 
-__version__ = pkg_resources.get_distribution('slash').version
+__version__ = version('slash')
 
 def get_backslash_client_version():
     try:
-        return pkg_resources.get_distribution('backslash').version
-    except pkg_resources.DistributionNotFound:
+        return version('backslash')
+    except PackageNotFoundError:
         return None
 
 __backslash_version__ = get_backslash_client_version()

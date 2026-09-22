@@ -1,4 +1,7 @@
 # pylint: disable=unused-argument,unused-variable,redefined-outer-name
+import sys
+import types
+
 import gossip
 import pytest
 
@@ -142,23 +145,25 @@ def test_interrupt_hooks_should_be_called_once(suite, suite_test, is_last_test, 
 
 def test_interrupted_with_custom_exception(suite, suite_test, request):
 
-    import test
+    module_name = '_slash_interruption_test_module'
+    module = types.ModuleType(module_name)
+    sys.modules[module_name] = module
 
     class CustomException(Exception):
         pass
-    test.__interruption_exception__ = CustomException
+    module.__interruption_exception__ = CustomException
 
     prev_interruption_exceptions = slash.exceptions.INTERRUPTION_EXCEPTIONS
     slash.exceptions.INTERRUPTION_EXCEPTIONS += (CustomException,)
 
     @request.addfinalizer
     def cleanup():
-        del test.__interruption_exception__
+        del sys.modules[module_name]
         slash.exceptions.INTERRUPTION_EXCEPTIONS = prev_interruption_exceptions
 
 
-    suite_test.append_line('import test')
-    suite_test.append_line('raise test.__interruption_exception__()')
+    suite_test.append_line('import {}'.format(module_name))
+    suite_test.append_line('raise {}.__interruption_exception__()'.format(module_name))
     suite_test.expect_interruption()
 
     for t in suite.iter_all_after(suite_test):

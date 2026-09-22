@@ -5,6 +5,7 @@ slash.exthook
 
 Mechanism behind slash.ext imports. Adopted from flask.ext, copyright 2011 by Armin Ronacher, Licensed under BSD.
 """
+import importlib.util
 import sys
 import os
 from .utils.python import reraise
@@ -33,13 +34,30 @@ class ExtensionImporter(object):
     def install(self):
         sys.meta_path[:] = [x for x in sys.meta_path if self != x] + [self]
 
-    def find_module(self, fullname, path=None): # pylint: disable=W0613
+    def find_spec(self, fullname, path=None, target=None): # pylint: disable=W0613
         if fullname.startswith(self.prefix):
-            return self
+            return importlib.util.spec_from_loader(fullname, self)
+        return None
 
-    def load_module(self, fullname):
-        if fullname in sys.modules:
-            return sys.modules[fullname]
+    def create_module(self, spec): # pylint: disable=W0613
+        """Use the default module creation semantics.
+
+        The module we redirect to is installed into ``sys.modules`` by
+        :meth:`exec_module` rather than being returned from here, since
+        ``module_from_spec()`` unconditionally overwrites ``__spec__`` on the
+        module it receives. Returning the real module would therefore leave it
+        pointing at this importer, making :func:`importlib.reload` on it a
+        no-op.
+        """
+        return None
+
+    def exec_module(self, module):
+        """Replace the newly created module with the already-executed module we
+        redirect to."""
+        fullname = module.__name__
+        sys.modules[fullname] = self._load_module(fullname)
+
+    def _load_module(self, fullname):
         modname = fullname.split('.', self.prefix_cutoff)[self.prefix_cutoff]
         for path in self.module_choices:
             realname = path % modname
@@ -65,10 +83,7 @@ class ExtensionImporter(object):
                 if self.is_important_traceback(realname, tb):
                     reraise(exc_type, exc_value, tb.tb_next)
                 continue
-            module = sys.modules[fullname] = sys.modules[realname]
-            if '.' not in modname:
-                setattr(sys.modules[self.wrapper_module], modname, module)
-            return module
+            return sys.modules[realname]
         raise ImportError('No module named %s' % fullname)
 
     def is_important_traceback(self, important_module, tb):

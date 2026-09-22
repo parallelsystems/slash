@@ -6,21 +6,20 @@ build-backend = "hatchling.build"
 name = "slash"
 description = "A Modern Testing Framework for Large-scale Projects"
 readme = "README.md"
-requires-python = ">=3.7"
+requires-python = ">=3.11"
 license = { text = "BSD 3-Clause License" }
 
 classifiers = [
-    "Programming Language :: Python :: 3.7",
-    "Programming Language :: Python :: 3.8",
-    "Programming Language :: Python :: 3.9",
-    "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
 ]
 dependencies = [
     "arrow",
     "colorama",
     "confetti>=2.5.3",
-    "dessert~=1.4.7",
+    "dessert>=1.6.3,<2",
     "emport~=1.3.1",
     "gossip>=2.3.0",
     "Jinja2",
@@ -31,12 +30,11 @@ dependencies = [
     "libtmux",
     "raven",
     "py>=1.5.0",
-    "pyparsing",
+    "pyparsing>=3",
     "vintage>=0.4.0",
     "brotli",
     "IPython==1.2.1; implementation_name=='pypy'",
-    "IPython<7.17.0; implementation_name!='pypy' and python_version<='3.6'",
-    "IPython; implementation_name!='pypy' and python_version>'3.6'",
+    "IPython; implementation_name!='pypy'",
 ]
 
 dynamic = ["version"]
@@ -62,8 +60,8 @@ testing = [
     "pytest-cov",
     "pytest-timeout",
     "pyforge",
-    "astroid~=2.15.5",
-    "pylint~=2.17.4",
+    "astroid>=4.0,<5",
+    "pylint>=4.0,<5",
 ]
 doc = [
     "alabaster",
@@ -75,7 +73,7 @@ doc = [
 [tool.hatch.version]
 source = "vcs"
 
-[tool.pytest]
-testpaths = "tests"
+[tool.pytest.ini_options]
+testpaths = ["tests"]
 timeout_method = "signal"
 addopts = "-ra -W error::DeprecationWarning"
