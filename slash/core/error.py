@@ -19,22 +19,25 @@ _logger = logbook.Logger(__name__)
 _CAPTURED_ERROR_MARKER = "__slash_captured_error__"
 
 
-def _iter_exception_chain(exc_value: BaseException | None) -> Iterator[tuple[str, BaseException]]:
+def _iter_exception_chain(exc_value: BaseException | None) -> Iterator[BaseException]:
     seen: set[int] = set()
-    prefix = ""
     while exc_value is not None and id(exc_value) not in seen:
         seen.add(id(exc_value))
-        yield prefix, exc_value
-        if exc_value.__suppress_context__:
-            prefix, exc_value = "Caused by: ", exc_value.__cause__
-        else:
-            prefix, exc_value = "While handling: ", exc_value.__context__
+        yield exc_value
+        exc_value = exc_value.__cause__ if exc_value.__suppress_context__ else exc_value.__context__
+
+
+def _chain_link_prefix(outer: BaseException | None, inner: BaseException) -> str:
+    if outer is None:
+        return ""
+    return "Caused by: " if inner is outer.__cause__ else "While handling: "
 
 
 def _format_exception_chain(exc_value: BaseException) -> str:
+    exceptions = list(_iter_exception_chain(exc_value))
     return "\n".join(
-        prefix + traceback.format_exception_only(exc)[0].strip()
-        for prefix, exc in _iter_exception_chain(exc_value))
+        _chain_link_prefix(outer, inner) + traceback.format_exception_only(inner)[0].strip()
+        for outer, inner in zip([None, *exceptions], exceptions))
 
 
 class Error(object):
