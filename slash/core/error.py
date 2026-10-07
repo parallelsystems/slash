@@ -1,5 +1,6 @@
 import sys
 import traceback
+from collections.abc import Iterator
 from itertools import pairwise
 
 import arrow
@@ -19,15 +20,15 @@ _logger = logbook.Logger(__name__)
 _CAPTURED_ERROR_MARKER = "__slash_captured_error__"
 
 
-def _iter_exception_chain(exc_value):
-    seen = set()
+def _iter_exception_chain(exc_value: BaseException | None) -> Iterator[BaseException]:
+    seen: set[int] = set()
     while exc_value is not None and id(exc_value) not in seen:
         seen.add(id(exc_value))
         yield exc_value
         exc_value = exc_value.__cause__ if exc_value.__suppress_context__ else exc_value.__context__
 
 
-def _format_exception_chain(exc_type, exc_value):
+def _format_exception_chain(exc_type: type[BaseException] | None, exc_value: BaseException | None) -> str:
     lines = [traceback.format_exception_only(exc_type, exc_value)[0].strip()]
     for outer, inner in pairwise(_iter_exception_chain(exc_value)):
         label = "Caused by" if inner is outer.__cause__ else "While handling"
