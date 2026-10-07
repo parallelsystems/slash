@@ -1,5 +1,6 @@
 import sys
 import traceback
+from itertools import pairwise
 
 import arrow
 import logbook
@@ -18,21 +19,19 @@ _logger = logbook.Logger(__name__)
 _CAPTURED_ERROR_MARKER = "__slash_captured_error__"
 
 
+def _iter_exception_chain(exc_value):
+    seen = set()
+    while exc_value is not None and id(exc_value) not in seen:
+        seen.add(id(exc_value))
+        yield exc_value
+        exc_value = exc_value.__cause__ if exc_value.__suppress_context__ else exc_value.__context__
+
+
 def _format_exception_chain(exc_type, exc_value):
     lines = [traceback.format_exception_only(exc_type, exc_value)[0].strip()]
-    seen = {id(exc_value)}
-    current = exc_value
-    while current is not None:
-        if current.__cause__ is not None:
-            label, current = "Caused by", current.__cause__
-        elif current.__context__ is not None and not current.__suppress_context__:
-            label, current = "While handling", current.__context__
-        else:
-            break
-        if id(current) in seen:
-            break
-        seen.add(id(current))
-        lines.append("{}: {}".format(label, traceback.format_exception_only(type(current), current)[0].strip()))
+    for outer, inner in pairwise(_iter_exception_chain(exc_value)):
+        label = "Caused by" if inner is outer.__cause__ else "While handling"
+        lines.append(f"{label}: {traceback.format_exception_only(type(inner), inner)[0].strip()}")
     return "\n".join(lines)
 
 
