@@ -106,6 +106,6 @@ class Fixture(FixtureBase):
                         self.info.name))
                 keyword_arguments[param_name] = needed_fixture
             except LookupError:
-                raise UnknownFixtures(param_name)
+                raise UnknownFixtures(param_name) from None
 
         return keyword_arguments
