@@ -148,7 +148,8 @@ class Error(object):
             return self.traceback.cause.func_name
 
     def __repr__(self):
-        return '<{0.__class__.__name__}: {0.message}>'.format(self)
+        first_line = self.message.partition('\n')[0]
+        return '<{}: {}>'.format(self.__class__.__name__, first_line)
 
     def get_detailed_traceback_str(self):
         """Returns a formatted traceback string for the exception caught

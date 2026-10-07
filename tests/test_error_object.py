@@ -224,6 +224,13 @@ def test_error_message_includes_unhashable_cause():
     assert cause_line.startswith("Caused by: ") and cause_line.endswith("UnhashableError: 1")
 
 
+def test_error_repr_shows_only_first_line_of_chain():
+    with pytest.raises(RuntimeError) as excinfo:
+        raise RuntimeError('outer') from KeyError('inner')
+
+    assert repr(_error_from(excinfo)) == "<Error: RuntimeError: outer>"
+
+
 ####
 
 
