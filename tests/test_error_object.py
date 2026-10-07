@@ -1,4 +1,5 @@
 # pylint: disable=redefined-outer-name,unused-variable
+import dataclasses
 import json
 import os
 import types
@@ -220,6 +221,25 @@ def test_error_message_stops_at_cause_cycle():
         err = Error.capture_exception()
 
     assert err.message == "RuntimeError: outer\nCaused by: KeyError: 'inner'"  # pylint: disable=used-before-assignment
+
+
+def test_error_message_includes_unhashable_cause():
+
+    @dataclasses.dataclass
+    class UnhashableError(Exception):
+        code: int
+
+    try:
+        try:
+            raise UnhashableError(1)
+        except UnhashableError as e:
+            raise RuntimeError('outer') from e
+    except RuntimeError:
+        err = Error.capture_exception()
+
+    outer_line, cause_line = err.message.splitlines()  # pylint: disable=used-before-assignment
+    assert outer_line == "RuntimeError: outer"
+    assert cause_line.startswith("Caused by: ") and cause_line.endswith("UnhashableError: 1")
 
 
 ####
