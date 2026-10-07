@@ -1,6 +1,6 @@
 import os
 import dessert
-from emport import import_file
+from ..utils.import_utils import import_file
 from ..utils.python import check_duplicate_functions
 
 class LocalConfig(object):

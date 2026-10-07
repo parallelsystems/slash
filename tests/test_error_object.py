@@ -3,12 +3,12 @@ import json
 import os
 import types
 
-import emport
 
 import dessert
 import pytest
 from slash.core.error import Error
 from slash.exception_handling import mark_exception_frame_correction
+from slash.utils.import_utils import import_file
 
 from .utils import without_pyc
 
@@ -218,7 +218,7 @@ def func():
     assert f(g(1)) == g(f(2))""")
 
     with dessert.rewrite_assertions_context():
-        module = emport.import_file(str(filename))
+        module = import_file(str(filename))
 
     try:
         module.func()

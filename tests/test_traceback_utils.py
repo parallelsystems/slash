@@ -1,10 +1,10 @@
 import sys
 
-import emport
 import vintage
 
 from slash.core.error import Error
 from slash.utils import traceback_utils
+from slash.utils.import_utils import import_file
 from slash.utils.traceback_utils import _MAX_VARIABLE_VALUE_LENGTH
 
 
@@ -30,7 +30,7 @@ def context():
     yield
 ''')
 
-    mod = emport.import_file(str(filename))
+    mod = import_file(str(filename))
     try:
         mod.f()
     except ZeroDivisionError:

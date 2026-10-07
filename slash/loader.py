@@ -6,7 +6,6 @@ from types import FunctionType, GeneratorType
 from contextlib import contextmanager
 
 import dessert
-from emport import import_file
 from logbook import Logger
 from sentinels import NOTHING
 
@@ -22,6 +21,7 @@ from .core.function_test import FunctionTestFactory
 from .exception_handling import handling_exceptions, mark_exception_handled, get_exception_frame_correction
 from .exceptions import CannotLoadTests, SlashInternalError
 from .core.runnable_test_factory import RunnableTestFactory
+from .utils.import_utils import import_file
 from .utils.pattern_matching import Matcher
 from .utils.python import check_duplicate_functions
 from .resuming import ResumedTestData
