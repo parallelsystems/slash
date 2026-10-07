@@ -17,6 +17,25 @@ from ..utils.traceback_utils import distill_call_stack, distill_traceback, disti
 _logger = logbook.Logger(__name__)
 _CAPTURED_ERROR_MARKER = "__slash_captured_error__"
 
+
+def _format_exception_chain(exc_type, exc_value):
+    lines = [traceback.format_exception_only(exc_type, exc_value)[0].strip()]
+    seen = {id(exc_value)}
+    current = exc_value
+    while current is not None:
+        if current.__cause__ is not None:
+            label, current = "Caused by", current.__cause__
+        elif current.__context__ is not None and not current.__suppress_context__:
+            label, current = "While handling", current.__context__
+        else:
+            break
+        if id(current) in seen:
+            break
+        seen.add(id(current))
+        lines.append("{}: {}".format(label, traceback.format_exception_only(type(current), current)[0].strip()))
+    return "\n".join(lines)
+
+
 class Error(object):
 
     traceback = exception_type = arg = _cached_detailed_traceback_str = None
@@ -27,7 +46,7 @@ class Error(object):
         self._fatal = False
         self._has_custom_message = (msg is not None)
         if msg is None and exc_info is not None:
-            msg = traceback.format_exception_only(exc_info[0], exc_info[1])[0].strip()
+            msg = _format_exception_chain(exc_info[0], exc_info[1])
         if not isinstance(msg, str):
             self.arg = msg
             msg = repr(msg)

@@ -156,6 +156,72 @@ def test_error_frame_correction():
     assert err.traceback.frames[-1].func_name == 'f'  # pylint: disable=used-before-assignment
 
 
+def test_error_message_includes_explicit_cause():
+    try:
+        try:
+            raise KeyError('inner')
+        except KeyError as e:
+            raise RuntimeError('outer') from e
+    except RuntimeError:
+        err = Error.capture_exception()
+
+    assert err.exception_type is RuntimeError  # pylint: disable=used-before-assignment
+    assert err.message == "RuntimeError: outer\nCaused by: KeyError: 'inner'"
+
+
+def test_error_message_includes_implicit_context():
+    try:
+        try:
+            raise KeyError('inner')
+        except KeyError:
+            raise RuntimeError('outer')  # pylint: disable=raise-missing-from
+    except RuntimeError:
+        err = Error.capture_exception()
+
+    assert err.message == "RuntimeError: outer\nWhile handling: KeyError: 'inner'"  # pylint: disable=used-before-assignment
+
+
+def test_error_message_includes_whole_chain():
+    try:
+        try:
+            try:
+                raise ValueError('root')
+            except ValueError as e:
+                raise KeyError('middle') from e
+        except KeyError as e:
+            raise RuntimeError('outer') from e
+    except RuntimeError:
+        err = Error.capture_exception()
+
+    assert err.message == (  # pylint: disable=used-before-assignment
+        "RuntimeError: outer\nCaused by: KeyError: 'middle'\nCaused by: ValueError: root")
+
+
+def test_error_message_omits_suppressed_context():
+    try:
+        try:
+            raise KeyError('inner')
+        except KeyError:
+            raise RuntimeError('outer') from None
+    except RuntimeError:
+        err = Error.capture_exception()
+
+    assert err.message == "RuntimeError: outer"  # pylint: disable=used-before-assignment
+
+
+def test_error_message_stops_at_cause_cycle():
+    outer = RuntimeError('outer')
+    inner = KeyError('inner')
+    outer.__cause__ = inner
+    inner.__cause__ = outer
+    try:
+        raise outer
+    except RuntimeError:
+        err = Error.capture_exception()
+
+    assert err.message == "RuntimeError: outer\nCaused by: KeyError: 'inner'"  # pylint: disable=used-before-assignment
+
+
 ####
 
 
