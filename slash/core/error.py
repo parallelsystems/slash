@@ -1,7 +1,6 @@
 import sys
 import traceback
 from collections.abc import Iterator
-from itertools import pairwise
 
 import arrow
 import logbook
@@ -20,20 +19,22 @@ _logger = logbook.Logger(__name__)
 _CAPTURED_ERROR_MARKER = "__slash_captured_error__"
 
 
-def _iter_exception_chain(exc_value: BaseException | None) -> Iterator[BaseException]:
+def _iter_exception_chain(exc_value: BaseException | None) -> Iterator[tuple[str, BaseException]]:
     seen: set[int] = set()
+    prefix = ""
     while exc_value is not None and id(exc_value) not in seen:
         seen.add(id(exc_value))
-        yield exc_value
-        exc_value = exc_value.__cause__ if exc_value.__suppress_context__ else exc_value.__context__
+        yield prefix, exc_value
+        if exc_value.__suppress_context__:
+            prefix, exc_value = "Caused by: ", exc_value.__cause__
+        else:
+            prefix, exc_value = "While handling: ", exc_value.__context__
 
 
-def _format_exception_chain(exc_type: type[BaseException] | None, exc_value: BaseException | None) -> str:
-    lines = [traceback.format_exception_only(exc_type, exc_value)[0].strip()]
-    for outer, inner in pairwise(_iter_exception_chain(exc_value)):
-        label = "Caused by" if inner is outer.__cause__ else "While handling"
-        lines.append(f"{label}: {traceback.format_exception_only(type(inner), inner)[0].strip()}")
-    return "\n".join(lines)
+def _format_exception_chain(exc_value: BaseException) -> str:
+    return "\n".join(
+        prefix + traceback.format_exception_only(exc)[0].strip()
+        for prefix, exc in _iter_exception_chain(exc_value))
 
 
 class Error(object):
@@ -46,7 +47,7 @@ class Error(object):
         self._fatal = False
         self._has_custom_message = (msg is not None)
         if msg is None and exc_info is not None:
-            msg = _format_exception_chain(exc_info[0], exc_info[1])
+            msg = _format_exception_chain(exc_info[1])
         if not isinstance(msg, str):
             self.arg = msg
             msg = repr(msg)
