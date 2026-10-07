@@ -29,11 +29,14 @@ def _iter_exception_chain(exc_value: BaseException | None) -> Iterator[BaseExcep
 
 
 def _format_exception_chain(exc_type: type[BaseException] | None, exc_value: BaseException | None) -> str:
-    lines = [traceback.format_exception_only(exc_type, exc_value)[0].strip()]
+    lines = [_format_exception(exc_type, exc_value)]
     for outer, inner in pairwise(_iter_exception_chain(exc_value)):
         label = "Caused by" if inner is outer.__cause__ else "While handling"
-        lines.append(f"{label}: {traceback.format_exception_only(type(inner), inner)[0].strip()}")
+        lines.append(f"{label}: {_format_exception(type(inner), inner)}")
     return "\n".join(lines)
+
+def _format_exception(exc_type: type[BaseException] | None, exc_value: BaseException | None) -> str:
+    return traceback.format_exception_only(exc_type, exc_value)[0].strip()
 
 
 class Error(object):
