@@ -1,7 +1,6 @@
 """Importing Python files by path, as modules of synthetic top-level packages.
 
-Adapted from emport (https://github.com/vmalloc/emport, BSD license, by Rotem Yaari), with the
-deprecated ``SourceFileLoader.load_module()`` call replaced by ``exec_module()``.
+Adapted from emport (https://github.com/vmalloc/emport, BSD license, by Rotem Yaari).
 """
 import importlib.util
 import itertools
