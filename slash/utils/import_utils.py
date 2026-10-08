@@ -25,18 +25,6 @@ def import_file(filename):
     return importlib.import_module(module_name)
 
 
-def _exec_package(name, init_filename):
-    spec = importlib.util.spec_from_file_location(
-        name, init_filename, submodule_search_locations=[os.path.dirname(init_filename)])
-    assert spec is not None and spec.loader is not None
-    module = importlib.util.module_from_spec(spec)
-    sys.modules[name] = module
-    try:
-        spec.loader.exec_module(module)
-    except BaseException:
-        sys.modules.pop(name, None)
-        raise
-    return module
 
 
 _package_name_generator = ('_{}'.format(x) for x in itertools.count())
