@@ -1,5 +1,7 @@
 import sys
 import traceback
+from collections.abc import Iterator
+from itertools import pairwise
 
 import arrow
 import logbook
@@ -17,9 +19,29 @@ from ..utils.traceback_utils import distill_call_stack, distill_traceback, disti
 _logger = logbook.Logger(__name__)
 _CAPTURED_ERROR_MARKER = "__slash_captured_error__"
 
+
+def _iter_exception_chain(exc_value: BaseException | None) -> Iterator[BaseException]:
+    seen: set[int] = set()
+    while exc_value is not None and id(exc_value) not in seen:
+        seen.add(id(exc_value))
+        yield exc_value
+        exc_value = exc_value.__cause__ if exc_value.__suppress_context__ else exc_value.__context__
+
+
+def _format_exception_chain(exc_type: type[BaseException] | None, exc_value: BaseException | None) -> str:
+    lines = [_format_exception(exc_type, exc_value)]
+    for outer, inner in pairwise(_iter_exception_chain(exc_value)):
+        label = "Caused by" if inner is outer.__cause__ else "While handling"
+        lines.append(f"{label}: {_format_exception(type(inner), inner)}")
+    return "\n".join(lines)
+
+def _format_exception(exc_type: type[BaseException] | None, exc_value: BaseException | None) -> str:
+    return traceback.format_exception_only(exc_type, exc_value)[0].strip()
+
+
 class Error(object):
 
-    traceback = exception_type = arg = _cached_detailed_traceback_str = None
+    traceback = exception_type = arg = _cached_detailed_traceback_str = _summary = None
 
     def __init__(self, msg=None, exc_info=None, frame_correction=0):
         super(Error, self).__init__()
@@ -27,7 +49,9 @@ class Error(object):
         self._fatal = False
         self._has_custom_message = (msg is not None)
         if msg is None and exc_info is not None:
-            msg = traceback.format_exception_only(exc_info[0], exc_info[1])[0].strip()
+            exc_type, exc_value, _ = exc_info
+            self._summary = _format_exception(exc_type, exc_value)
+            msg = _format_exception_chain(exc_type, exc_value)
         if not isinstance(msg, str):
             self.arg = msg
             msg = repr(msg)
@@ -126,7 +150,7 @@ class Error(object):
             return self.traceback.cause.func_name
 
     def __repr__(self):
-        return '<{0.__class__.__name__}: {0.message}>'.format(self)
+        return '<{}: {}>'.format(self.__class__.__name__, self._summary or self.message)
 
     def get_detailed_traceback_str(self):
         """Returns a formatted traceback string for the exception caught

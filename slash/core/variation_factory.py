@@ -62,7 +62,7 @@ class VariationFactory(object):
                 try:
                     fixture = self._store.get_fixture_by_argument(argument)
                 except FixtureException as e:
-                    raise type(e)('Loading {0.__code__.co_filename}:{0.__name__}: {1}'.format(func, e))
+                    raise type(e)('Loading {0.__code__.co_filename}:{0.__name__}: {1}'.format(func, e)) from None
 
 
             self._needed_fixtures.append(fixture)

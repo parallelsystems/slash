@@ -1,4 +1,5 @@
 # pylint: disable=redefined-outer-name,unused-variable
+import dataclasses
 import json
 import os
 import types
@@ -154,6 +155,87 @@ def test_error_frame_correction():
         err = Error.capture_exception()
 
     assert err.traceback.frames[-1].func_name == 'f'  # pylint: disable=used-before-assignment
+
+
+def _error_from(excinfo: pytest.ExceptionInfo[BaseException]) -> Error:
+    return Error(exc_info=(excinfo.type, excinfo.value, excinfo.tb))
+
+
+def test_error_message_includes_explicit_cause():
+    with pytest.raises(RuntimeError) as excinfo:
+        raise RuntimeError('outer') from KeyError('inner')
+
+    err = _error_from(excinfo)
+    assert err.exception_type is RuntimeError
+    assert err.message == "RuntimeError: outer\nCaused by: KeyError: 'inner'"
+
+
+def test_error_message_includes_implicit_context():
+    with pytest.raises(RuntimeError) as excinfo:
+        try:
+            raise KeyError('inner')
+        except KeyError:
+            raise RuntimeError('outer')  # pylint: disable=raise-missing-from
+
+    assert _error_from(excinfo).message == "RuntimeError: outer\nWhile handling: KeyError: 'inner'"
+
+
+def test_error_message_includes_whole_chain():
+    middle = KeyError('middle')
+    middle.__cause__ = ValueError('root')
+    with pytest.raises(RuntimeError) as excinfo:
+        raise RuntimeError('outer') from middle
+
+    assert _error_from(excinfo).message == (
+        "RuntimeError: outer\nCaused by: KeyError: 'middle'\nCaused by: ValueError: root")
+
+
+def test_error_message_omits_suppressed_context():
+    with pytest.raises(RuntimeError) as excinfo:
+        try:
+            raise KeyError('inner')
+        except KeyError:
+            raise RuntimeError('outer') from None
+
+    assert _error_from(excinfo).message == "RuntimeError: outer"
+
+
+def test_error_message_stops_at_cause_cycle():
+    outer = RuntimeError('outer')
+    inner = KeyError('inner')
+    inner.__cause__ = outer
+    with pytest.raises(RuntimeError) as excinfo:
+        raise outer from inner
+
+    assert _error_from(excinfo).message == "RuntimeError: outer\nCaused by: KeyError: 'inner'"
+
+
+def test_error_message_includes_unhashable_cause():
+
+    @dataclasses.dataclass
+    class UnhashableError(Exception):
+        code: int
+
+    with pytest.raises(RuntimeError) as excinfo:
+        raise RuntimeError('outer') from UnhashableError(1)
+
+    outer_line, cause_line = _error_from(excinfo).message.splitlines()
+    assert outer_line == "RuntimeError: outer"
+    assert cause_line.startswith("Caused by: ") and cause_line.endswith("UnhashableError: 1")
+
+
+def test_error_repr_omits_chain():
+    with pytest.raises(RuntimeError) as excinfo:
+        raise RuntimeError('outer') from KeyError('inner')
+
+    assert repr(_error_from(excinfo)) == "<Error: RuntimeError: outer>"
+
+
+def test_error_repr_keeps_multiline_exception_text():
+    with pytest.raises(RuntimeError) as excinfo:
+        raise RuntimeError('outer\n\tstatus = UNIMPLEMENTED') from KeyError('inner')
+
+    assert repr(_error_from(excinfo)) == "<Error: RuntimeError: outer\n\tstatus = UNIMPLEMENTED>"
 
 
 ####

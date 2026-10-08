@@ -455,5 +455,5 @@ class SessionResults(object):
             try:
                 return next(itertools.islice(self._results_dict.values(), test, test + 1))
             except StopIteration:
-                raise IndexError()
+                raise IndexError() from None
         return self.get_result(test)
