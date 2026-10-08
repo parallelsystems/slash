@@ -22,16 +22,7 @@ def import_file(filename):
     """Given a path to a file, imports it as a Python module
     """
     module_name = _create_new_module_name(filename)
-    is_package = os.path.isdir(filename) or filename.endswith('__init__.py')
-    if os.path.isdir(filename):
-        filename = os.path.join(filename, '__init__.py')
-
-    package_name = module_name if is_package else module_name.rsplit('.', 1)[0]
-    if package_name != module_name and package_name not in sys.modules:
-        # need to import the package first
-        _exec_package(package_name, os.path.join(os.path.dirname(filename), '__init__.py'))
-
-    return __import__(module_name, fromlist=[''])
+    return importlib.import_module(module_name)
 
 
 def _exec_package(name, init_filename):
