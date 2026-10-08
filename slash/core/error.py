@@ -41,7 +41,7 @@ def _format_exception(exc_type: type[BaseException] | None, exc_value: BaseExcep
 
 class Error(object):
 
-    traceback = exception_type = arg = _cached_detailed_traceback_str = None
+    traceback = exception_type = arg = _cached_detailed_traceback_str = _summary = None
 
     def __init__(self, msg=None, exc_info=None, frame_correction=0):
         super(Error, self).__init__()
@@ -49,7 +49,9 @@ class Error(object):
         self._fatal = False
         self._has_custom_message = (msg is not None)
         if msg is None and exc_info is not None:
-            msg = _format_exception_chain(exc_info[0], exc_info[1])
+            exc_type, exc_value, _ = exc_info
+            self._summary = _format_exception(exc_type, exc_value)
+            msg = _format_exception_chain(exc_type, exc_value)
         if not isinstance(msg, str):
             self.arg = msg
             msg = repr(msg)
@@ -148,8 +150,7 @@ class Error(object):
             return self.traceback.cause.func_name
 
     def __repr__(self):
-        first_line = self.message.partition('\n')[0]
-        return '<{}: {}>'.format(self.__class__.__name__, first_line)
+        return '<{}: {}>'.format(self.__class__.__name__, self._summary or self.message)
 
     def get_detailed_traceback_str(self):
         """Returns a formatted traceback string for the exception caught

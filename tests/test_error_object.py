@@ -224,11 +224,18 @@ def test_error_message_includes_unhashable_cause():
     assert cause_line.startswith("Caused by: ") and cause_line.endswith("UnhashableError: 1")
 
 
-def test_error_repr_shows_only_first_line_of_chain():
+def test_error_repr_omits_chain():
     with pytest.raises(RuntimeError) as excinfo:
         raise RuntimeError('outer') from KeyError('inner')
 
     assert repr(_error_from(excinfo)) == "<Error: RuntimeError: outer>"
+
+
+def test_error_repr_keeps_multiline_exception_text():
+    with pytest.raises(RuntimeError) as excinfo:
+        raise RuntimeError('outer\n\tstatus = UNIMPLEMENTED') from KeyError('inner')
+
+    assert repr(_error_from(excinfo)) == "<Error: RuntimeError: outer\n\tstatus = UNIMPLEMENTED>"
 
 
 ####
