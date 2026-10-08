@@ -24,8 +24,6 @@ def import_file(filename):
     return importlib.import_module(module_name)
 
 
-
-
 _package_name_generator = ('_{}'.format(x) for x in itertools.count())
 _cached_package_names = {}
 
