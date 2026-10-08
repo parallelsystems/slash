@@ -11,7 +11,7 @@ from ..utils import parallel_utils
 from ..utils.python import reraise
 from ..conf import config
 from contextlib import contextmanager
-from emport import import_file
+from ..utils.import_utils import import_file
 from sentinels import NOTHING
 from vintage import warn_deprecation
 import logbook
