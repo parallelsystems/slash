@@ -5,6 +5,7 @@ import pickle
 import time
 import collections
 import platform
+from concurrent import futures
 from six.moves import xmlrpc_client
 from .server import NO_MORE_TESTS, PROTOCOL_ERROR, WAITING_FOR_CLIENTS
 from ..exceptions import INTERRUPTION_EXCEPTIONS
@@ -26,6 +27,7 @@ class Worker(object):
         self.keepalive_server_addr = 'http://{}:{}'.format(config.root.parallel.server_addr, config.root.parallel.keepalive_port)
         self._stop_event = None
         self._watchdog_thread = None
+        self._warning_sender = futures.ThreadPoolExecutor(max_workers=1)
 
     def keep_alive(self, stop_event):
         proxy = xmlrpc_client.ServerProxy(self.keepalive_server_addr)
@@ -36,10 +38,16 @@ class Worker(object):
     def warning_added(self, warning):
         try:
             warning = pickle.dumps(warning)
-            self.client.report_warning(self.client_id, warning)
+            self._warning_sender.submit(self._report_warning, warning)
         except (pickle.PicklingError, TypeError):
             _logger.error("Failed to pickle warning. Message: {}, File: {}, Line: {}",
                           warning.message, warning.filename, warning.lineno, extra={'capture': False})
+
+    def _report_warning(self, pickled_warning: bytes) -> None:
+        try:
+            xmlrpc_client.ServerProxy(self.server_addr, allow_none=True).report_warning(self.client_id, pickled_warning)
+        except Exception as err:  # pylint: disable=broad-except
+            _logger.error("Failed to report warning to server, error: {}", err, extra={'capture': False})
 
     def error_added(self, error, result):
         if result.is_global_result():

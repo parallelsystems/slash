@@ -1,8 +1,11 @@
 import munch
 import slash
 import os
+import pickle
 import signal
 import sys
+import threading
+from xmlrpc.server import SimpleXMLRPCServer
 
 from vintage import get_no_deprecations_context
 from .utils.suite_writer import Suite
@@ -10,6 +13,7 @@ from slash.resuming import get_tests_from_previous_session
 from slash.exceptions import InteractiveParallelNotAllowed, ParallelTimeout
 from slash.parallel.server import ServerStates
 from slash.parallel.parallel_manager import ParallelManager
+from slash.parallel.worker import Worker
 from slash import Session
 from slash.loader import Loader
 import time
@@ -181,6 +185,28 @@ def test_session_warnings(parallel_suite):
     assert len(session_results.warnings) == 1
     [w] = session_results.warnings
     assert w.message == 'message'
+
+def test_worker_warning_does_not_wait_for_server(config_override):
+    server_released = threading.Event()
+    received = []
+
+    def report_warning(_client_id, pickled_warning):
+        received.append((server_released.wait(timeout=10), pickle.loads(pickled_warning.data)))
+
+    server = SimpleXMLRPCServer(('localhost', 0), allow_none=True, logRequests=False)
+    server.register_function(report_warning)
+    threading.Thread(target=server.serve_forever, daemon=True).start()
+    config_override("parallel.server_port", server.server_address[1])
+    worker = Worker(client_id=1, session_id='session')
+    try:
+        worker.warning_added('message')
+        server_released.set()
+        worker._warning_sender.shutdown(wait=True)  # pylint: disable=protected-access
+    finally:
+        server_released.set()
+        server.shutdown()
+        server.server_close()
+    assert received == [(True, 'message')]
 
 def test_child_session_errors(parallel_suite):
     parallel_suite[0].expect_failure()
